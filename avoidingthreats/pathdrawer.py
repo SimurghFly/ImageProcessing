@@ -6,11 +6,11 @@ def main():
     target = np.array([1,1])
 
     obstacles = [
-        np.array([[12,7],[2,0]]),
-        np.array([[5,7],[4,0]]),
+        np.array([[12,7],[1,0]]),
+        np.array([[5,11],[2,0]]),
     ]
 
-    pos = np.array([9, 15])
+    pos = np.array([15, 10])
     lastpos = pos
 
     # draw a green point at target
@@ -35,9 +35,11 @@ def main():
         while force.pisagor(pos, target) > 1:
             f = force.total(pos, target, obstacles)
             lastpos = pos
-            pos = pos + f * 0.5
+            pos = pos + f * 2
             #draw a line between pos and lastpos
             draw_path(lastpos, pos)
+            # burda çiz demek yerine şu konuma git diyeceğiz 
+            # eğer çok büyük bir açıyla manevra ettirmek istersek açıyı küçükltmeliyiz
             plt.scatter(pos[0], pos[1], color='black')
             plt.pause(0.1)
     finally:

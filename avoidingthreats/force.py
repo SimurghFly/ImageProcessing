@@ -12,9 +12,9 @@ def attractive(target, pos):
 
 def repulsive(obstacles, pos):
     d0 = 1
-    rep_k = 5
+    rep_k = 6
     k = 100
-    n = 1.4 # The bigger n is, the more rapidly the force decreases
+    n = 1.5 # The bigger n is, the more rapidly the force decreases
 
     # Every obstacle is like [[x,y],[r, 0]]
     total_force = np.array([0, 0])
@@ -25,9 +25,10 @@ def repulsive(obstacles, pos):
         d = pisagor(o_pos, pos) 
 
         if d < r:
-            rep_force = (pos - o_pos) * (d/r)
+            rep_force = rep_k * (pos - o_pos) / d
         elif d < 10*r: # It can be better to use r + d0 instead of 2r
-            rep_force = rep_k * (pos - o_pos) * (r/d) * (1 / (d)**n)
+            rep_force = rep_k * (pos - o_pos) * (1/d) * (1 / (d-r)**n)
+            # rep_force = rep_k * (pos - o_pos) * r / d * 
         else: 
             rep_force = pos - pos # 0,0
 

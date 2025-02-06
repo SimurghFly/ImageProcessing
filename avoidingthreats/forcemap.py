@@ -6,8 +6,8 @@ def main():
     pos = np.array([9, 15])
     target = np.array([1,1])
     obstacles = [
-        np.array([[12,7],[2,0]]),
-        np.array([[5,7],[4,0]]),
+        np.array([[12,7],[1,0]]),
+        np.array([[5,11],[2,0]]),
     ]
 
     x_range = np.linspace(0, 18, 20)
