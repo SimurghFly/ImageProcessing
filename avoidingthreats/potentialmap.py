@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 
 import potential
 
+#Don't use this
+
 # Grid oluştur
 x_range = np.linspace(-10, 10, 20)
 y_range = np.linspace(-10, 10, 20)
