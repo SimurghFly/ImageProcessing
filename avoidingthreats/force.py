@@ -26,7 +26,8 @@ def repulsive(obstacles, pos):
 
         if d < r:
             rep_force = rep_k * (pos - o_pos) / d
-        elif d < 10*r: # It can be better to use r + d0 instead of 2r
+        elif d < 10*r: # 10r means everywhere
+            # It can be better to use r + d0 instead of 10r
             rep_force = rep_k * (pos - o_pos) * (1/d) * (1 / (d-r)**n)
             # rep_force = rep_k * (pos - o_pos) * r / d * 
         else: 
