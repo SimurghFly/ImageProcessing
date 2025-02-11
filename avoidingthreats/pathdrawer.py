@@ -3,6 +3,9 @@ import matplotlib.pyplot as plt
 import force
 
 def main():
+    # Tum konumlar ve yarıcaplar kucultulecek
+    # Kucultme oranı (t*v den büyük bir oran)
+
     target = np.array([1,1])
 
     obstacles = [
@@ -39,7 +42,7 @@ def main():
             #draw a line between pos and lastpos
             draw_path(lastpos, pos)
             # burda çiz demek yerine şu konuma git diyeceğiz 
-            # eğer çok büyük bir açıyla manevra ettirmek istersek açıyı küçükltmeliyiz
+            # !!!!!!! eğer çok büyük bir açıyla manevra ettirmek istersek açıyı küçükltmeliyiz
             plt.scatter(pos[0], pos[1], color='black')
             plt.pause(0.1)
     finally:
