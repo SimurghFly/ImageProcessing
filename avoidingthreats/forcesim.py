@@ -1,48 +1,42 @@
 #gpt yazdı
 
-from dronekit import connect, VehicleMode, LocationGlobalRelative
 import time
 import numpy as np
+from mavsdk import System
+from mavsdk.offboard import (OffboardError, PositionNed)
 
 v = 15
 t = 10
 kucultme_orani = t*v*1.2
 
-def attractive(target, pos):
+async def attractive(target, pos):
     att_k = 3
-
     force = target - pos
     d = np.linalg.norm(force - np.array([0,0]))
     force = force / d
-
     return force * att_k
 
-def repulsive(obstacles, pos):
+async def repulsive(obstacles, pos):
     d0 = 1
     rep_k = 6
     k = 100
-    n = 1.5 # The bigger n is, the more rapidly the force decreases
+    n = 1.5  # The bigger n is, the more rapidly the force decreases
 
-    # Every obstacle is like [[x,y],[r, 0]]
     total_force = np.array([0, 0])
     for obs in obstacles:
         o_pos = np.array(obs[0])
         r = obs[1][0]
-
-        d = np.linalg.norm(o_pos - pos) 
+        d = np.linalg.norm(o_pos - pos)
         if d == 0:
             d = 0.00001
         dr = d - r
         if dr == 0:
             dr = 0.00001
 
-
         if d < r:
             rep_force = rep_k * (pos - o_pos) / d
-        elif d < 10*r: # 10r means everywhere
-            # It can be better to use r + d0 instead of 10r
+        elif d < 10*r: 
             rep_force = rep_k * (pos - o_pos) * (1/d) * (1 / dr**n)
-            # rep_force = rep_k * (pos - o_pos) * r / d * 
         else: 
             rep_force = pos - pos # 0,0
 
@@ -50,46 +44,46 @@ def repulsive(obstacles, pos):
     
     return total_force
 
-# WE'LL NEED REPULSIVE FORCE FOR EDGES OF THE ZONE
-
-def total(pos, target, obstacles, unity = True):
-    t = repulsive(obstacles, pos) + attractive(target, pos)
+async def total(pos, target, obstacles, unity=True):
+    t = await repulsive(obstacles, pos) + await attractive(target, pos)
     magnitude = ((t[0]**2 + t[1]**2)**0.5)
     if magnitude == 0:
         return (np.array([1,0]))   
-    return t / magnitude if unity else t  # + duvarların ititci kuvveti
+    return t / magnitude if unity else t  
 
 # İHA Bağlantısı
-print("İHA'ya bağlanılıyor...")
-vehicle = connect('udp:127.0.0.1:14550', wait_ready=True)
+async def connect_vehicle():
+    print("İHA'ya bağlanılıyor...")
+    drone = System()
+    await drone.connect()
 
-# Kalkış fonksiyonu
-def arm_and_takeoff(altitude):
+    # Check connection status
+    async for state in drone.core.connection_state():
+        if state.is_connected:
+            print("Bağlantı başarılı!")
+            break
+
+    return drone
+
+async def arm_and_takeoff(drone, altitude):
     print("Motorlar arm ediliyor...")
-    while not vehicle.is_armable:
+    while not await drone.is_armable():
         print("İHA arm edilebilir değil, bekleniyor...")
-        time.sleep(1)
+        await asyncio.sleep(1)
 
-    vehicle.mode = VehicleMode("GUIDED")
-    vehicle.armed = True
-
-    while not vehicle.armed:
+    await drone.set_arm(True)
+    
+    while not await drone.is_armed():
         print("Motorlar açılıyor...")
-        time.sleep(1)
+        await asyncio.sleep(1)
 
     print("Kalkış başlıyor!")
-    vehicle.simple_takeoff(altitude)
+    await drone.offboard.set_position_ned(PositionNed(0, 0, -altitude))
+    await asyncio.sleep(10)  # Simulate takeoff time
 
-    while True:
-        print(f"Yükseklik: {vehicle.location.global_relative_frame.alt:.2f} m")
-        if vehicle.location.global_relative_frame.alt >= altitude * 0.95:
-            print("Hedef yüksekliğe ulaşıldı!")
-            break
-        time.sleep(1)
+    print("Kalkış tamamlandı!")
 
-# Yeni hedef konum belirleme (APF ile)
-def move_with_apf():
-    # Hedef ve engeller
+async def move_with_apf(drone):
     target = [10, 10]  # APF hedefi (örnek)
     obstacles = [[[3, 3], [2, 0]]]
 
@@ -99,11 +93,11 @@ def move_with_apf():
             continue
 
         # Mevcut konum
-        current_location = vehicle.location.global_relative_frame
-        pos = [current_location.lat / kucultme_orani, current_location.lon / kucultme_orani]
+        current_location = await drone.telemetry.position()
+        pos = [current_location.latitude / kucultme_orani, current_location.longitude / kucultme_orani]
 
         # APF kuvvetini hesapla
-        force = total(pos, target, obstacles)
+        force = await total(pos, target, obstacles)
         print(f"Kuvvet: {force}")
 
         # Kuvveti pozisyona dönüştür
@@ -111,21 +105,25 @@ def move_with_apf():
         new_lon = (pos[1] + force[1]) * kucultme_orani
 
         # Yeni konuma git
-        new_location = LocationGlobalRelative(new_lat, new_lon, 10)
-        vehicle.simple_goto(new_location)
+        await drone.offboard.set_position_ned(PositionNed(new_lat, new_lon, -10))
         lastcommand = time.time()
         print(f"Yeni konuma gidiliyor: Lat={new_lat}, Lon={new_lon}")
 
-# Kalkış ve sürekli komut gönderme
-try:
-    arm_and_takeoff(10)  # 10 metreye kalk
+# Ana çalışma fonksiyonu
+import asyncio
 
-    move_with_apf()
+async def main():
+    drone = await connect_vehicle()
     
+    try:
+        await arm_and_takeoff(drone, 10)  # 10 metreye kalk
+        await move_with_apf(drone)
+    except KeyboardInterrupt:
+        print("Görev iptal edildi.")
+    finally:
+        print("İniş başlatılıyor...")
+        await drone.set_land(True)
+        await drone.close()
 
-except KeyboardInterrupt:
-    print("Görev iptal edildi.")
-finally:
-    print("İniş başlatılıyor...")
-    vehicle.mode = VehicleMode("LAND")
-    vehicle.close()
+if __name__ == "__main__":
+    asyncio.run(main())
