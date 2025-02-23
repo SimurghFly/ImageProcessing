@@ -42,6 +42,8 @@ def repulsive(obstacles, pos):
 def total(pos, target, obstacles, unity = True):
     t = repulsive(obstacles, pos) + attractive(target, pos)
     magnitude = ((t[0]**2 + t[1]**2)**0.5)
+    if magnitude == 0:
+        return (np.array([1,0]))   
     return t / magnitude if unity else t  # + duvarların ititci kuvveti
 
 def pisagor(pos1, pos2):
