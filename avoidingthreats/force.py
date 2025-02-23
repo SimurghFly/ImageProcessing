@@ -23,12 +23,18 @@ def repulsive(obstacles, pos):
         r = obs[1][0]
 
         d = pisagor(o_pos, pos) 
+        if d == 0:
+            d = 0.00001
+        dr = d - r
+        if dr == 0:
+            dr = 0.00001
+
 
         if d < r:
             rep_force = rep_k * (pos - o_pos) / d
         elif d < 10*r: # 10r means everywhere
             # It can be better to use r + d0 instead of 10r
-            rep_force = rep_k * (pos - o_pos) * (1/d) * (1 / (d-r)**n)
+            rep_force = rep_k * (pos - o_pos) * (1/d) * (1 / dr**n)
             # rep_force = rep_k * (pos - o_pos) * r / d * 
         else: 
             rep_force = pos - pos # 0,0
