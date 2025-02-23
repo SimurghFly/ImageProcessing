@@ -53,7 +53,7 @@ def total(pos, target, obstacles, unity = True):
     return t / magnitude if unity else t  # + duvarların ititci kuvveti
 
 def pisagor(pos1, pos2):
-    return ((pos1[0]-pos2[0])**2 + (pos1[1]-pos2[1])**2)**(0.5)
+    return np.linalg.norm(pos1 - pos2)
 
 def test():
     target = np.array([10, 10])
