@@ -87,9 +87,9 @@ async def arm_and_takeoff(drone : System, altitude):
     await drone.action.takeoff()
     await asyncio.sleep(10)  # Simulate takeoff time
 
-    #print("VTOL, sabit kanat moduna geçiyor...")
-    #await drone.action.transition_to_fixedwing()
-    #await asyncio.sleep(2)
+    print("VTOL, sabit kanat moduna geçiyor...")
+    await drone.action.transition_to_fixedwing()
+    await asyncio.sleep(2)
 
 
     print("Kalkış tamamlandı!")
