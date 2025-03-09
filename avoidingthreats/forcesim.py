@@ -3,7 +3,7 @@
 import time
 import numpy as np
 from mavsdk import System
-from mavsdk.offboard import (OffboardError, PositionNed)
+from mavsdk.offboard import (OffboardError, PositionNedYaw)
 
 v = 15
 t = 10
@@ -78,7 +78,7 @@ async def arm_and_takeoff(drone, altitude):
         await asyncio.sleep(1)
 
     print("Kalkış başlıyor!")
-    await drone.offboard.set_position_ned(PositionNed(0, 0, -altitude))
+    await drone.offboard.set_position_ned(PositionNedYaw(0, 0, -altitude))
     await asyncio.sleep(10)  # Simulate takeoff time
 
     print("Kalkış tamamlandı!")
@@ -105,7 +105,7 @@ async def move_with_apf(drone):
         new_lon = (pos[1] + force[1]) * kucultme_orani
 
         # Yeni konuma git
-        await drone.offboard.set_position_ned(PositionNed(new_lat, new_lon, -10))
+        await drone.offboard.set_position_ned(PositionNedYaw(new_lat, new_lon, -10))
         lastcommand = time.time()
         print(f"Yeni konuma gidiliyor: Lat={new_lat}, Lon={new_lon}")
 
