@@ -8,6 +8,7 @@ from mavsdk.offboard import (OffboardError, PositionNedYaw)
 v = 15
 t = 10
 kucultme_orani = t*v*1.2
+SYSTEMADRESS = ""
 
 async def attractive(target, pos):
     att_k = 3
@@ -55,7 +56,7 @@ async def total(pos, target, obstacles, unity=True):
 async def connect_vehicle():
     print("İHA'ya bağlanılıyor...")
     drone = System()
-    await drone.connect()
+    await drone.connect(system_address=SYSTEMADRESS)
 
     # Check connection status
     async for state in drone.core.connection_state():
@@ -65,49 +66,69 @@ async def connect_vehicle():
 
     return drone
 
-async def arm_and_takeoff(drone, altitude):
+async def arm_and_takeoff(drone : System, altitude):
     print("Motorlar arm ediliyor...")
-    while not await drone.is_armable():
-        print("İHA arm edilebilir değil, bekleniyor...")
+    async for health in drone.telemetry.health():
+        if health.is_global_position_ok and health.is_armable:
+            print("Drone hazır, motorlar açılıyor...")
+            break
         await asyncio.sleep(1)
 
-    await drone.set_arm(True)
+    await drone.action.arm()
     
-    while not await drone.is_armed():
-        print("Motorlar açılıyor...")
+    async for state in drone.telemetry.armed():
+        if state:
+            print("Drone armlandı!")
+            break
         await asyncio.sleep(1)
 
     print("Kalkış başlıyor!")
-    await drone.offboard.set_position_ned(PositionNedYaw(0, 0, -altitude))
+    #await drone.action.set_takeoff_altitude(altitude) sabitkanatsa bunu kullan
+    await drone.action.takeoff()
     await asyncio.sleep(10)  # Simulate takeoff time
+
+    #print("VTOL, sabit kanat moduna geçiyor...")
+    #await drone.action.transition_to_fixedwing()
+    #await asyncio.sleep(2)
+
 
     print("Kalkış tamamlandı!")
 
-async def move_with_apf(drone):
+async def move_with_apf(drone : System):
     target = [10, 10]  # APF hedefi (örnek)
     obstacles = [[[3, 3], [2, 0]]]
+
+    await drone.offboard.start()
 
     lastcommand = 0
     while True:
         if time.time() - lastcommand < 10:
-            continue
+            await asyncio.sleep(1)
+
+        await asyncio.sleep(1)
 
         # Mevcut konum
-        current_location = await drone.telemetry.position()
-        pos = [current_location.latitude / kucultme_orani, current_location.longitude / kucultme_orani]
+        async for position in drone.telemetry.position():
+            pos = [position.latitude / kucultme_orani, 
+                   position.longitude / kucultme_orani]  
+            break
 
         # APF kuvvetini hesapla
-        force = await total(pos, target, obstacles)
+        force = await total(np.array(pos), np.array(target), obstacles)
         print(f"Kuvvet: {force}")
 
         # Kuvveti pozisyona dönüştür
         new_lat = (pos[0] + force[0]) * kucultme_orani
         new_lon = (pos[1] + force[1]) * kucultme_orani
 
-        # Yeni konuma git
-        await drone.offboard.set_position_ned(PositionNedYaw(new_lat, new_lon, -10))
-        lastcommand = time.time()
         print(f"Yeni konuma gidiliyor: Lat={new_lat}, Lon={new_lon}")
+        try:
+            await drone.offboard.set_position_ned(PositionNedYaw(new_lat, new_lon, -10))
+        except OffboardError as e:
+            print(f"Offboard Hatası: {e}")
+            await drone.offboard.stop()
+            return
+        lastcommand = time.time()
 
 # Ana çalışma fonksiyonu
 import asyncio
@@ -122,8 +143,8 @@ async def main():
         print("Görev iptal edildi.")
     finally:
         print("İniş başlatılıyor...")
-        await drone.set_land(True)
-        await drone.close()
+        await drone.action.land()
+        await asyncio.sleep(5)
 
 if __name__ == "__main__":
     asyncio.run(main())
