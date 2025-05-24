@@ -4,19 +4,13 @@ import time
 import numpy as np
 from mavsdk import System
 from mavsdk.offboard import (OffboardError, PositionNedYaw)
-<<<<<<< HEAD
 from pymap3d import geodetic2ned
-=======
->>>>>>> 50bc8ada345f078c19343d3bbf0bdc5c52bcbf7a
 
 v = 15
 t = 1
 kucultme_orani = t*v*5
 SYSTEMADRESS = "udp://:14540"
-<<<<<<< HEAD
 geo = []
-=======
->>>>>>> 50bc8ada345f078c19343d3bbf0bdc5c52bcbf7a
 
 async def attractive(target, pos):
     att_k = 3
@@ -96,19 +90,18 @@ async def arm_and_takeoff(drone : System, altitude):
     await asyncio.sleep(10)  # Simulate takeoff time
 
     print("VTOL, sabit kanat moduna geçiyor...")
-    # await drone.action.transition_to_fixedwing()
+    await drone.action.transition_to_fixedwing()
     await asyncio.sleep(2)
 
 
     print("Kalkış tamamlandı!")
 
-<<<<<<< HEAD
+
     async for position in drone.telemetry.position():
+        global geo
         geo = position.latitude, position.longitude, position.relative_altitude_m
         break
 
-=======
->>>>>>> 50bc8ada345f078c19343d3bbf0bdc5c52bcbf7a
 async def move_with_apf(drone : System):
     target = [2.48, 1.4]  # APF hedefi (örnek)
     obstacles = [[[1.49, 0.1], [0.1, 0]]]
@@ -125,16 +118,11 @@ async def move_with_apf(drone : System):
 
         # Mevcut konum
         async for position in drone.telemetry.position():
-<<<<<<< HEAD
             lat, lon, alt = position.latitude, position.longitude, position.relative_altitude_m
             ned_north, ned_east, ned_down = geodetic2ned(lat, lon, alt, geo[0], geo[1], geo[2])
             pos = [ned_east / kucultme_orani, 
                    ned_north / kucultme_orani]  
-=======
             print(position)
-            pos = [position.latitude_deg / kucultme_orani, 
-                   position.longitude_deg / kucultme_orani]  
->>>>>>> 50bc8ada345f078c19343d3bbf0bdc5c52bcbf7a
             break
 
         # APF kuvvetini hesapla
@@ -142,21 +130,12 @@ async def move_with_apf(drone : System):
         print(f"Kuvvet: {force}")
 
         # Kuvveti pozisyona dönüştür
-<<<<<<< HEAD
         new_e = (pos[0] + force[0]) * kucultme_orani
         new_n = (pos[1] + force[1]) * kucultme_orani
 
         print(f"Yeni konuma gidiliyor: n: {new_n}, e: {new_e}")
         try:
-            await drone.offboard.set_position_ned(PositionNedYaw(new_n, new_e, -10))
-=======
-        new_lat = (pos[0] + force[0]*5) * kucultme_orani
-        new_lon = (pos[1] + force[1]*5) * kucultme_orani
-
-        print(f"Yeni konuma gidiliyor: Lat={new_lat}, Lon={new_lon}")
-        try:
-            await drone.offboard.set_position_ned(PositionNedYaw(new_lat, new_lon, -10, 0))
->>>>>>> 50bc8ada345f078c19343d3bbf0bdc5c52bcbf7a
+            await drone.offboard.set_position_ned(PositionNedYaw(new_n, new_e, -10, 0))
         except OffboardError as e:
             print(f"Offboard Hatası: {e}")
             await drone.offboard.stop()
@@ -180,8 +159,4 @@ async def main():
         await asyncio.sleep(5)
 
 if __name__ == "__main__":
-<<<<<<< HEAD
     asyncio.run(main())
-=======
-    asyncio.run(main())
->>>>>>> 50bc8ada345f078c19343d3bbf0bdc5c52bcbf7a
