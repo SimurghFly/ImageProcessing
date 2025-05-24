@@ -1,0 +1,22 @@
+uçak için path:
+export GAZEBO_PLUGIN_PATH=$GAZEBO_PLUGIN_PATH:$HOME/PX4-Autopilot/build/px4_sitl_default/build_gazebo-classic
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/PX4-Autopilot/build/px4_sitl_default/build_gazebo-classic
+export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:$HOME/gazebo_models_worlds_collection/models:$HOME/PX4-Autopilot/Tools/simulation/gazebo-classic/sitl_gazebo-classic/models
+
+
+terminal1:
+gzserver ~/gazebo_models_worlds_collection/worlds/outdoor.world --verbose &
+gzclient &
+
+terminal2: 
+make px4_sitl none
+uçağı manuel koy
+
+terminal3:
+cd ~/ros2_ws
+colcon build --symlink-install
+source install/setup.bash
+ros2 launch yolobot_recognition launch_yolov8.launch.py
+
+terminal4: 
+ros2 run rqt_image_view rqt_image_viewer
