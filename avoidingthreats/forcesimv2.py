@@ -7,9 +7,9 @@ from mavsdk.offboard import (OffboardError, PositionNedYaw)
 from pymap3d import geodetic2ned
 
 v = 15
-t = 10
-kucultme_orani = t*v*1.2
-SYSTEMADRESS = ""
+t = 1
+kucultme_orani = t*v*5
+SYSTEMADRESS = "udp://:14540"
 geo = []
 
 async def attractive(target, pos):
@@ -90,7 +90,7 @@ async def arm_and_takeoff(drone : System, altitude):
     await asyncio.sleep(10)  # Simulate takeoff time
 
     print("VTOL, sabit kanat moduna geçiyor...")
-    await drone.action.transition_to_fixedwing()
+    # await drone.action.transition_to_fixedwing()
     await asyncio.sleep(2)
 
 
@@ -101,14 +101,15 @@ async def arm_and_takeoff(drone : System, altitude):
         break
 
 async def move_with_apf(drone : System):
-    target = [10, 10]  # APF hedefi (örnek)
-    obstacles = [[[3, 3], [2, 0]]]
+    target = [2.48, 1.4]  # APF hedefi (örnek)
+    obstacles = [[[1.49, 0.1], [0.1, 0]]]
 
+    await drone.offboard.set_position_ned(PositionNedYaw(0, 0, -10, 0))
     await drone.offboard.start()
 
     lastcommand = 0
     while True:
-        if time.time() - lastcommand < 10:
+        if time.time() - lastcommand < t:
             await asyncio.sleep(1)
 
         await asyncio.sleep(1)
