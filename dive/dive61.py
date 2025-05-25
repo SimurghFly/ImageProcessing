@@ -1,10 +1,11 @@
-#gpt yazdı
-
 import asyncio
 from mavsdk.offboard import Attitude
 from mavsdk import System
 from mavsdk.offboard import (OffboardError, PositionNedYaw)
 import math
+
+import numpy as np
+from pymap3d import geodetic2ned
 
 SYSTEMADRESS = "udp://:14540"
 
@@ -15,14 +16,18 @@ targetXuzaklik = 61
 targetZuzaklik = maxyuksek
 targetYuzaklik = 0
 
-target = [200, 200] # north east sırasıyla
-waypoints = [[0, 200], [100, 200]]
+tolerence = 10
 
+target = [0, -146] # north east sırasıyla
 
 async def dive(drone):
         try:
+            async for euler in drone.telemetry.attitude_euler():
+                yaw = euler.yaw_deg  # Yaw değeri derece cinsinden
+                print(f"Anlık Yaw: {yaw:.2f}°")
+                break
             # 45 derece dalış başlıyor
-            attitude = Attitude(0, -dalmaAcisi, 0, thrust_value=0.6)
+            attitude = Attitude(0, -dalmaAcisi, yaw, thrust_value=0.6)
             await drone.offboard.set_attitude(attitude)
             await drone.offboard.start()
         except OffboardError as error:
@@ -52,24 +57,7 @@ async def dive(drone):
                 break
             await asyncio.sleep(0.1)
 
-async def go2Waypoints(drone):
-    telefipayi = 20
-    print("-- Offboard başlatılıyor")
-    await drone.offboard.set_position_ned(PositionNedYaw(waypoints[0][1], waypoints[0][0], -maxyuksek, 0))
-    await drone.offboard.start()
-
-    dogru = True
-    while dogru:
-        async for pos in drone.telemetry.position():
-            #if pos ile waypoints[0][1], waypoints[0][0] arasındaki mesafe telefipayindan küçükse :
-            #    dogru  = False
-            #    break
-            pass
-        await asyncio.sleep(1)
-
-    
-
-async def run():
+async def main():
     drone = System()
     await drone.connect(system_address=SYSTEMADRESS)
 
@@ -78,41 +66,38 @@ async def run():
         if state.is_connected:
             print("Drone bağlı!")
             break
+    async for position in drone.telemetry.position():
+        # Drone pozisyonu
+        slat = position.latitude_deg
+        slon = position.longitude_deg
+        salt = position.relative_altitude_m
+        break
 
-    print("-- ARM ediliyor")
-    await drone.action.arm()
+    while True:
+        async for position in drone.telemetry.position():
+            # Drone pozisyonu
+            lat = position.latitude_deg
+            lon = position.longitude_deg
+            alt = position.relative_altitude_m
 
-    print("-- {maxyuksek} metreye kalkış")
-    await drone.action.takeoff()
-    await asyncio.sleep(10)  # Yeterince yükseğe çıkması için bekle
+            # NED dönüşümü (dronub başlangıcını'ı referans al)
+            n, e, d = geodetic2ned(lat, lon, alt, slat, slon, salt) 
+            print(f"n: {n}, e: {e}, lan: {lat}, lon: {lon}")
+            distance = np.linalg.norm([n-target[0], e-target[1]])
 
+            print(f"Şu anki mesafe hedefe: {distance:.2f} m")
 
-    print("-- Offboard başlatılıyor")
-    await drone.offboard.set_position_ned(PositionNedYaw(0.0, 0.0, -maxyuksek, 0.0))
-    await drone.offboard.start()
-
-    dogru = True
-    while dogru:
-        async for pos in drone.telemetry.position():
-            if pos.relative_altitude_m >= maxyuksek - 1:
-                print(f">> {maxyuksek} metreye ulaşıldı: {pos.relative_altitude_m:.2f} m")
-                dogru  = False
+            async for euler in drone.telemetry.attitude_euler():
+                yaw = euler.yaw_deg  # Yaw değeri derece cinsinden
+                print(f"Anlık Yaw: {yaw:.2f}°")
                 break
-        await asyncio.sleep(1)
 
-    print("-- Pozisyon kontrolü durduruluyor")
-    await drone.offboard.stop()
+            if distance <= targetXuzaklik + tolerence:
+                print("✅ Drone hedefe 61 metreden fazla yaklaşmış!")
+                await dive(drone)
+                break
 
-    print("VTOL, sabit kanat moduna geçiyor...")
-    await asyncio.sleep(10) 
-
-    
-    #await drone.action.transition_to_fixedwing()
-
-    await dive(drone)
-    print("-- Offboard durduruluyor ve iniş")
-    await drone.offboard.stop()
-    await drone.action.land()
+            await asyncio.sleep(0.5)
 
 if __name__ == "__main__":
-    asyncio.run(run())
+    asyncio.run(main())
