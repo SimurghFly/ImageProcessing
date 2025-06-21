@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from geometry_msgs.msg import Vector3
 from ultralytics import YOLO
 import rclpy
 from rclpy.node import Node
@@ -31,6 +32,7 @@ class Camera_subscriber(Node):
         # burda modelden gelen inference resultları önce array'e atıp sonrasında image'e çeviriyoruz
         self.yolov8_pub = self.create_publisher(Yolov8Inference, "/Yolov8_Inference", 1)
         self.img_pub = self.create_publisher(Image, "/inference_result", 1)
+        self.offset_pub = self.create_publisher(Vector3, "/object_offset", 1)
 
     def camera_callback(self, data):
 
@@ -57,6 +59,25 @@ class Camera_subscriber(Node):
                 self.inference_result.bottom = int(b[2])
                 self.inference_result.right = int(b[3])
                 self.yolov8_inference.yolov8_inference.append(self.inference_result)
+
+                height, width, _ = img.shape
+
+                center_x = (b[0] + b[2]) / 2
+                center_y = (b[1] + b[3]) / 2
+
+                percent_right = ((center_x - width/2) / (width)) * 100
+                percent_top = ((center_y - height/2) / (height)) * 100
+
+
+                xl = ((b[2] - b[0]) / width) * 100
+                yl = ((b[3] - b[1]) / height) * 100
+
+                # Publish et
+                offset_msg = Vector3()
+                offset_msg.x = percent_right
+                offset_msg.y = percent_top
+                offset_msg.z = max(xl, yl)
+                self.offset_pub.publish(offset_msg)
 
             #camera_subscriber.get_logger().info(f"{self.yolov8_inference}")
 
