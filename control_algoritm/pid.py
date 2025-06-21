@@ -34,7 +34,7 @@ class pidControl:
 
 def main():
     dt = 0.1
-    pid = pidControl(0, (1, 1, 1.8))
+    pid = pidControl(0, (1, 0, 0))
     
     val = 150
     for _ in range(50):
