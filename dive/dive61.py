@@ -70,7 +70,7 @@ async def main():
         # Drone pozisyonu
         slat = position.latitude_deg
         slon = position.longitude_deg
-        salt = position.relative_altitude_m
+        salt = position.absolute_altitude_m
         break
 
     while True:
@@ -78,7 +78,7 @@ async def main():
             # Drone pozisyonu
             lat = position.latitude_deg
             lon = position.longitude_deg
-            alt = position.relative_altitude_m
+            alt = position.absolute_altitude_m
 
             # NED dönüşümü (dronub başlangıcını'ı referans al)
             n, e, d = geodetic2ned(lat, lon, alt, slat, slon, salt) 
